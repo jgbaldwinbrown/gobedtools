@@ -53,6 +53,29 @@ func (b Bed) Bed() (io.Reader, error) {
 	return pr, nil
 }
 
+func ParseBedLine(line string) BedEntry {
+	sline := strings.Split(line, "\t")
+	if len(sline) < 3 {
+		return BedEntry{Err: fmt.Errorf("len(sline) %v too short", len(sline))}
+	}
+
+	var entry BedEntry
+	entry.Chr = sline[0]
+
+	entry.Start, entry.Err = strconv.ParseInt(sline[1], 0, 64)
+	if entry.Err != nil {
+		return entry
+	}
+
+	entry.End, entry.Err = strconv.ParseInt(sline[2], 0, 64)
+	if entry.Err != nil {
+		return entry
+	}
+
+	entry.Fields = sline[3:]
+	return entry
+}
+
 func IntersectBedReader(abed io.Reader, opts []string, bpath string) (<-chan BedEntry, error) {
 	cmd, r, err := IntersectCore(abed, opts, bpath)
 	if err != nil {
@@ -71,22 +94,7 @@ func IntersectBedReader(abed io.Reader, opts []string, bpath string) (<-chan Bed
 		s.Buffer([]byte{}, 1e12)
 
 		for s.Scan() {
-			line := strings.Split(s.Text(), "\t")
-			if len(line) < 3 {
-				entries <- BedEntry{Err: fmt.Errorf("len(line) %v too short", len(line))}
-			}
-			var entry BedEntry
-			entry.Chr = line[0]
-			entry.Start, entry.Err = strconv.ParseInt(line[1], 0, 64)
-			if entry.Err != nil {
-				entries <- entry
-			}
-			entry.End, entry.Err = strconv.ParseInt(line[2], 0, 64)
-			if entry.Err != nil {
-				entries <- entry
-			}
-			entry.Fields = line[3:]
-			entries <- entry
+			entries <- ParseBedLine(s.Text())
 		}
 	}()
 
