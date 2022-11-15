@@ -62,3 +62,11 @@ func (b BedEntry) Bed() (io.Reader, error) {
 	fmt.Fprintf(&buf, "\n")
 	return &buf, nil
 }
+
+func CollectBed(bi BedIter) []BedEntry {
+	var bed []BedEntry
+	for val, ok := bi.Next(); ok; val, ok = bi.Next() {
+		bed = append(bed, val)
+	}
+	return bed
+}
