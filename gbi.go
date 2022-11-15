@@ -129,10 +129,12 @@ func IntersectBeds(abed Bedder, opts []string, bbed Bedder) (<-chan BedEntry, er
 		os.Remove(bfile.Name())
 		return nil, err
 	}
-	bbedded := bbeddedreader.(io.ReadCloser)
-	defer bbedded.Close()
 
-	_, err = io.Copy(bfile, bbedded)
+	if bbeddedcloser, ok := bbeddedreader.(io.ReadCloser); ok {
+		defer bbeddedcloser.Close()
+	}
+
+	_, err = io.Copy(bfile, bbeddedreader)
 	bfile.Close()
 	if err != nil {
 		os.Remove(bfile.Name())
