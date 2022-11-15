@@ -31,6 +31,17 @@ func (b BedChan) Bed() (io.Reader, error) {
 	return pr, nil
 }
 
+func (b Bed) BedChan() <-chan BedEntry {
+	out := make(chan BedEntry, 256)
+	go func() {
+		for _, e := range b{
+			out <- e
+		}
+		close(out)
+	}()
+	return out
+}
+
 func WriteBed(bi BedIter, w io.Writer) error {
 	for b, ok := bi.Next(); ok; b, ok = bi.Next() {
 		b.Fprint(w)
