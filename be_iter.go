@@ -19,6 +19,18 @@ func (b BedChan) Next() (BedEntry, bool) {
 	return be, ok
 }
 
+func (b BedChan) Bed() (io.Reader, error) {
+	pr, pw := io.Pipe()
+	go func() {
+		defer pw.Close()
+		err := WriteBed(b, pw)
+		if err != nil {
+			panic(err)
+		}
+	}()
+	return pr, nil
+}
+
 func WriteBed(bi BedIter, w io.Writer) error {
 	for b, ok := bi.Next(); ok; b, ok = bi.Next() {
 		b.Fprint(w)
