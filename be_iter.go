@@ -11,7 +11,7 @@ type BedIter interface {
 }
 
 type BedChan struct {
-	BedEChan chan BedEntry
+	BedEChan <-chan BedEntry
 }
 
 func (b BedChan) Next() (BedEntry, bool) {
