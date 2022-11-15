@@ -38,15 +38,19 @@ type Bedder interface {
 
 type Bed []BedEntry
 
+func (b BedEntry) Fprint(w io.Writer) {
+	fmt.Fprintf(w, "%v\t%v\t%v", b.Chr, b.Start, b.End)
+	for _, field := range b.Fields {
+		fmt.Fprintf(w, "\t%v", field)
+	}
+}
+
 func (b Bed) Bed() (io.Reader, error) {
 	pr, pw := io.Pipe()
 	go func() {
 		defer pw.Close()
 		for _, entry := range b {
-			fmt.Fprintf(pw, "%v\t%v\t%v", entry.Chr, entry.Start, entry.End)
-			for _, field := range entry.Fields {
-				fmt.Fprintf(pw, "\t%v", field)
-			}
+			entry.Fprint(pw)
 			fmt.Fprintf(pw, "\n")
 		}
 	}()
@@ -76,6 +80,20 @@ func ParseBedLine(line string) BedEntry {
 	return entry
 }
 
+func ReaderToBedEChan(r io.Reader) <-chan BedEntry {
+	entries := make(chan BedEntry, 256)
+	go func() {
+		defer close(entries)
+		s := bufio.NewScanner(r)
+		s.Buffer([]byte{}, 1e12)
+
+		for s.Scan() {
+			entries <- ParseBedLine(s.Text())
+		}
+	}()
+	return entries
+}
+
 func IntersectBedReader(abed io.Reader, opts []string, bpath string) (<-chan BedEntry, error) {
 	cmd, r, err := IntersectCore(abed, opts, bpath)
 	if err != nil {
@@ -87,16 +105,7 @@ func IntersectBedReader(abed io.Reader, opts []string, bpath string) (<-chan Bed
 		return nil, err
 	}
 
-	entries := make(chan BedEntry, 256)
-	go func() {
-		defer close(entries)
-		s := bufio.NewScanner(r)
-		s.Buffer([]byte{}, 1e12)
-
-		for s.Scan() {
-			entries <- ParseBedLine(s.Text())
-		}
-	}()
+	entries := ReaderToBedEChan(r)
 
 	return entries, nil
 }
