@@ -10,10 +10,12 @@ type BedIter interface {
 	Next() (BedEntry, bool)
 }
 
-type BedChan chan BedEntry
+type BedChan struct {
+	BedEChan chan BedEntry
+}
 
 func (b BedChan) Next() (BedEntry, bool) {
-	be, ok := <-b
+	be, ok := <-b.BedEChan
 	return be, ok
 }
 
